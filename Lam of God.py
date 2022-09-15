@@ -18,7 +18,7 @@ def all_equal(iterable):
     g = itertools.groupby(iterable)
     return next(g, True) and not next(g, False)
 
-layup = np.array([0,45,90,-45])  # Orientation of the fibres for each layer/ply of the laminate
+layup = np.array([0,45,90,-45,-45,90,45,0])  # Orientation of the fibres for each layer/ply of the laminate
 plythickness = 0.25
 E11 = 125
 E22 = 8
@@ -27,9 +27,21 @@ v12 = 0.3
 
 
 
+
+
 plycount = layup.size
 result = biggestgroup(layup)
 max_angle = max(abs(np.diff(layup%180)))
+
+
+balance=np.zeros((plycount))
+for i in range(plycount):
+    if layup[i]!=layup[i]%90:
+        balance[i]=-(layup[i]%90)
+    else:
+        balance[i] = layup[i]
+balance_check = np.sum(balance)
+print(balance_check)
 
 split = np.array_split(layup,2)
 if plycount%2==1:
@@ -40,13 +52,20 @@ symmetry = np.sum(abs(split[0]-flip))
 
 if (symmetry == 0 and plycount%2==0):
     anglehop =np.diff(split[0]%180)
-    QI = all_equal(anglehop)
+    # QI = all_equal(anglehop)
+    # print(QI)
+    QI1 = all_equal(anglehop)
+    if (180 / (plycount/2) - biggestgroup(anglehop)[0] == 0 and QI1 == True):
+        QI_Result = True
+    else:
+        QI_Result = False
 else:
     anglehop = np.diff(layup % 180)
     QI1 = all_equal(anglehop)
     if(180/plycount-biggestgroup(anglehop)[0]==0 and QI1==True):
         QI_Result=True
-
+    else:
+        QI_Result = False
 
 
 E1 = np.full((layup.shape[0], 1), 125)[:, 0]  # Axial stiffness of each ply [GPa]
@@ -125,14 +144,18 @@ print(ABD)
 print("\n")
 
 print(Fore.BLUE+"REPORT"+Style.RESET_ALL)
-# print(Fore.GREEN + "VERIFIED: Laminate is Balanced"+Style.RESET_ALL)
-if symmetry==0:
-    print(Fore.GREEN + "VERIFIED: Layup is Symmetric"+Style.RESET_ALL)
+if (symmetry==0 and balance_check==0):
+    print(Fore.GREEN + "VERIFIED: Laminate is Balanced-Symmetric"+Style.RESET_ALL)
 else:
-    print(Fore.YELLOW + "WARNING: Layup is Asymmetric" + Style.RESET_ALL)
-# print(Fore.GREEN + "VERIFIED: Laminate is Balanced-Symmetric"+Style.RESET_ALL)
-# print(Fore.GREEN + "VERIFIED: Laminate is QI"+Style.RESET_ALL)
+    if symmetry==0:
+        print(Fore.GREEN + "VERIFIED: Layup is Symmetric"+Style.RESET_ALL)
+    if balance_check==0:
+        print(Fore.GREEN + "VERIFIED: Laminate is Balanced"+Style.RESET_ALL)
 
+if QI_Result==True:
+    print(Fore.GREEN + "VERIFIED: Laminate is quasi-isotropic"+Style.RESET_ALL)
+if symmetry != 0:
+    print(Fore.YELLOW + "WARNING: Layup is Asymmetric" + Style.RESET_ALL)
 if result[1]>=3:
     print(Fore.YELLOW + "WARNING: Layup has "+str(result[1])+" plies at "+str(result[0])+" degrees next to each other"+Style.RESET_ALL)
 if max_angle>45:
