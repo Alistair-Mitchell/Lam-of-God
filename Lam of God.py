@@ -18,21 +18,27 @@ def all_equal(iterable):
     g = itertools.groupby(iterable)
     return next(g, True) and not next(g, False)
 
-layup = np.array([0,45,90,-45,-45,90,45,0])  # Orientation of the fibres for each layer/ply of the laminate
-plythickness = 0.25
-E11 = 125
-E22 = 8
-G12 = 5
-v12 = 0.3
 
-
-
-
-
+layup = np.array([])  # Orientation of the fibres for each layer/ply of the laminate
 plycount = layup.size
+
+if plycount == 0:
+    arr = input("Enter layup: ")  # takes the whole line of n numbers
+    l = list(map(int, arr.split('/')))  # split those numbers with space( becomes ['2','3','6','6','5']) and then map every element into int (becomes [2,3,6,6,5])
+    layup = np.array(l)
+    print(layup)
+    print(np.array([0, 45]) )
+plycount = layup.size
+plythickness = 0.25
+YM11 = 125
+YM22 = 8
+Shear = 5
+Poiss = 0.3
+
+
+
 result = biggestgroup(layup)
 max_angle = max(abs(np.diff(layup%180)))
-
 
 balance=np.zeros((plycount))
 for i in range(plycount):
@@ -41,7 +47,7 @@ for i in range(plycount):
     else:
         balance[i] = layup[i]
 balance_check = np.sum(balance)
-print(balance_check)
+
 
 split = np.array_split(layup,2)
 if plycount%2==1:
@@ -68,17 +74,17 @@ else:
         QI_Result = False
 
 
-E1 = np.full((layup.shape[0], 1), 125)[:, 0]  # Axial stiffness of each ply [GPa]
+E1 = np.full((layup.shape[0], 1), YM11)[:, 0]  # Axial stiffness of each ply [GPa]
 # E1 = np.array([45.6,45.6,45.6])                 # (Use this instead if layer properties are not the same for all layers)
 
-E2 = np.full((layup.shape[0], 1), 8)[:, 0]  # transverse stiffness of each ply [GPa]
+E2 = np.full((layup.shape[0], 1), YM22)[:, 0]  # transverse stiffness of each ply [GPa]
 # E2 = np.array([16.2,16.2.16,2])                 # (Use this instead if layer properties are not the same for all layers)
 
-v12 = np.full((layup.shape[0], 1), 0.3)[:, 0]  # Poisson's ratio
+v12 = np.full((layup.shape[0], 1), Poiss)[:, 0]  # Poisson's ratio
 # v12 = np.array([0.278,0.278,0.278])             # (Use this instead if layer properties are not the same for all layers)
 v21 = (v12 * E2) / E1  # (Since the compliance matrix is symmetric, v12/E1=v21/E2)
 
-G12 = np.full((layup.shape[0], 1), 5)[:, 0]  # Shear modulus [GPa]
+G12 = np.full((layup.shape[0], 1), Shear)[:, 0]  # Shear modulus [GPa]
 # G12 = np.array([5.83,5.83,5.83])                # (Use this instead if layer properties are not the same for all layers)
 
 h = np.full((plycount),plythickness)
