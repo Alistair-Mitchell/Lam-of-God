@@ -26,8 +26,6 @@ if plycount == 0:
     arr = input("Enter layup: ")  # takes the whole line of n numbers
     l = list(map(int, arr.split('/')))  # split those numbers with space( becomes ['2','3','6','6','5']) and then map every element into int (becomes [2,3,6,6,5])
     layup = np.array(l)
-    print(layup)
-    print(np.array([0, 45]) )
 plycount = layup.size
 plythickness = 0.25
 YM11 = 125
@@ -61,14 +59,14 @@ if (symmetry == 0 and plycount%2==0):
     # QI = all_equal(anglehop)
     # print(QI)
     QI1 = all_equal(anglehop)
-    if (180 / (plycount/2) - biggestgroup(anglehop)[0] == 0 and QI1 == True):
+    if (180 / (plycount/2) - biggestgroup(anglehop)[0] == 0 and QI1 == True and (plycount/2)>=3):
         QI_Result = True
     else:
         QI_Result = False
 else:
     anglehop = np.diff(layup % 180)
     QI1 = all_equal(anglehop)
-    if(180/plycount-biggestgroup(anglehop)[0]==0 and QI1==True):
+    if(180/plycount-biggestgroup(anglehop)[0]==0 and QI1==True and plycount>=3):
         QI_Result=True
     else:
         QI_Result = False
