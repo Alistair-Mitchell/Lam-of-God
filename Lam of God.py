@@ -18,12 +18,13 @@ def all_equal(iterable):
     g = itertools.groupby(iterable)
     return next(g, True) and not next(g, False)
 
-
+print("\nLam of God V1.3, AListair Mitchell (AJM) 2022")
 layup = np.array([])  # Orientation of the fibres for each layer/ply of the laminate
 plycount = layup.size
 
 if plycount == 0:
-    arr = input("Enter layup: ")  # takes the whole line of n numbers
+    print("\nWhere a layup isn't specified, please enter a layup seperated by /")
+    arr = input("Enter layup : ")  # takes the whole line of n numbers
     l = list(map(int, arr.split('/')))  # split those numbers with space( becomes ['2','3','6','6','5']) and then map every element into int (becomes [2,3,6,6,5])
     layup = np.array(l)
 plycount = layup.size
@@ -36,7 +37,7 @@ Poiss = 0.3
 
 
 result = biggestgroup(layup)
-max_angle = max(abs(np.diff(layup%180)))
+
 
 balance=np.zeros((plycount))
 for i in range(plycount):
@@ -54,7 +55,10 @@ if plycount%2==1:
 flip = np.flip(split[1])
 symmetry = np.sum(abs(split[0]-flip))
 
+
+
 if (symmetry == 0 and plycount%2==0):
+    max_angle = max(abs(np.diff(layup % 180)))
     anglehop =np.diff(split[0]%180)
     # QI = all_equal(anglehop)
     # print(QI)
@@ -63,7 +67,11 @@ if (symmetry == 0 and plycount%2==0):
         QI_Result = True
     else:
         QI_Result = False
+elif plycount == 1:
+    max_angle = 0
+    QI_Result = False
 else:
+    max_angle = max(abs(np.diff(layup % 180)))
     anglehop = np.diff(layup % 180)
     QI1 = all_equal(anglehop)
     if(180/plycount-biggestgroup(anglehop)[0]==0 and QI1==True and plycount>=3):
