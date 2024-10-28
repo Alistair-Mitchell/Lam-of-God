@@ -3,8 +3,37 @@ from colorama import Fore, Back, Style
 from math import log10, floor
 import itertools
 
+np.set_printoptions(precision=3,suppress=True)
+
 def round_sig(x, sig=3):
     return round(x, sig-int(floor(log10(abs(x))))-1)
+def engineering_notation(x):
+    if x == 0:
+        return "0.000"
+    
+    exponent = int(np.floor(np.log10(abs(x)) / 3) * 3)
+    coefficient = x / (10 ** exponent)
+    
+    return f"{coefficient:.3f}e{exponent}"
+def print_engineering_matrix(matrix, use_table_format=False):
+    # Apply engineering notation to the matrix
+    formatted_matrix = np.vectorize(engineering_notation)(matrix)
+    # Find the maximum width for consistent spacing
+    max_width = max(len(entry) for row in formatted_matrix for entry in row)
+    if use_table_format:
+        # Create top border
+        print("+" + "-" * (max_width + 2) * matrix.shape[1] + "+")
+    # Print each row with consistent spacing
+    for row in formatted_matrix:
+        if use_table_format:
+            row_str = " | ".join(f"{entry:>{max_width}}" for entry in row)
+            print(f"| {row_str} |")
+        else:
+            row_str = "\t".join(f"{entry:>{max_width}}" for entry in row)
+            print(row_str)
+    if use_table_format:
+        # Create bottom border after the last row
+        print("+" + "-" * (max_width + 2) * matrix.shape[1] + "+")
 def biggestgroup(input):
     grouped = ([(list(g)) for k, g in itertools.groupby(input)])
     list_len = [len(i) for i in grouped]
@@ -15,10 +44,20 @@ def biggestgroup(input):
     Value = grouped[Value_index][0]
     return Value,Frequency
 def all_equal(iterable):
+
     g = itertools.groupby(iterable)
     return next(g, True) and not next(g, False)
 
-print("\nLam of God V1.3, AListair Mitchell (AJM) 2022")
+def printCR(colour,string):
+    colourdict = {
+      "g": Fore.GREEN,
+      "y": Fore.YELLOW,
+      "r": Fore.RED,
+      "b": Fore.BLUE
+    }
+    print(colourdict[colour],string,Style.RESET_ALL)
+    
+print("\nLam of God V1.4, AListair Mitchell (AJM) 2022")
 layup = np.array([])  # Orientation of the fibres for each layer/ply of the laminate
 plycount = layup.size
 
@@ -28,17 +67,17 @@ if plycount == 0:
     l = list(map(int, arr.split('/')))  # split those numbers with space( becomes ['2','3','6','6','5']) and then map every element into int (becomes [2,3,6,6,5])
     layup = np.array(l)
 plycount = layup.size
-plythickness = 0.25
-YM11 = 125
-YM22 = 8
-Shear = 5
+#Please use SI units if you want anything useful out
+plythickness = 0.005
+YM11 = 20010000
+YM22 = 1301000
+Shear = 1001000
 Poiss = 0.3
 
+#Check for largest grouping of plies
+grouping = biggestgroup(layup)
 
-
-result = biggestgroup(layup)
-
-
+#Check for balanced laminate
 balance=np.zeros((plycount))
 for i in range(plycount):
     if layup[i]!=layup[i]%90:
@@ -47,7 +86,7 @@ for i in range(plycount):
         balance[i] = layup[i]
 balance_check = np.sum(balance)
 
-
+#Check for symetry
 split = np.array_split(layup,2)
 if plycount%2==1:
     lastElementIndex = len(split[0]) - 1
@@ -55,9 +94,8 @@ if plycount%2==1:
 flip = np.flip(split[1])
 symmetry = np.sum(abs(split[0]-flip))
 
-
-
-if (symmetry == 0 and plycount%2==0):
+#Check for quasi isotropy
+if (symmetry == 0 and plycount%2==0 and plycount>2):
     max_angle = max(abs(np.diff(layup % 180)))
     anglehop =np.diff(split[0]%180)
     # QI = all_equal(anglehop)
@@ -79,19 +117,12 @@ else:
     else:
         QI_Result = False
 
-
-E1 = np.full((layup.shape[0], 1), YM11)[:, 0]  # Axial stiffness of each ply [GPa]
 # E1 = np.array([45.6,45.6,45.6])                 # (Use this instead if layer properties are not the same for all layers)
-
+E1 = np.full((layup.shape[0], 1), YM11)[:, 0]  # Axial stiffness of each ply [GPa]
 E2 = np.full((layup.shape[0], 1), YM22)[:, 0]  # transverse stiffness of each ply [GPa]
-# E2 = np.array([16.2,16.2.16,2])                 # (Use this instead if layer properties are not the same for all layers)
-
 v12 = np.full((layup.shape[0], 1), Poiss)[:, 0]  # Poisson's ratio
-# v12 = np.array([0.278,0.278,0.278])             # (Use this instead if layer properties are not the same for all layers)
 v21 = (v12 * E2) / E1  # (Since the compliance matrix is symmetric, v12/E1=v21/E2)
-
 G12 = np.full((layup.shape[0], 1), Shear)[:, 0]  # Shear modulus [GPa]
-# G12 = np.array([5.83,5.83,5.83])                # (Use this instead if layer properties are not the same for all layers)
 
 h = np.full((plycount),plythickness)
 h_mod = np.full((plycount+1),plythickness)
@@ -109,8 +140,6 @@ for i in range(layup.shape[0]):
     v12l=v12[i]
     v21l=v21[i]
     G12l=G12[i]
-    # print('Ply no. ' + str(i+1) + ': theta='+ str(layup[i]) +', E1l=' + str(E1l), ' E2l=' + str(E2l))
-    # Establishing current local stiffness matrix (of the ply), Ql:
     Ql = 1/(1-v12l*v21l)*np.array([[E1l,v21l*E1l,0],\
                                    [v12l*E2l,E2l,0],\
                                    [0,0,G12l*(1-v12l*v21l)]])
@@ -144,43 +173,50 @@ Ex = round_sig(1/Sstar[0,0])
 Ey = round_sig(1/Sstar[1,1])
 Gxy = round_sig(1/Sstar[2,2])
 vxy=-round_sig(Sstar[1,0]/Sstar[0,0])
-print(Fore.BLUE+"LAYUP"+Style.RESET_ALL)
+printCR('b',"\nLAYUP")
 print(layup)
-print('\n'+Fore.BLUE+"LAMINATE MATERIAL PROPERTIES"+Style.RESET_ALL)
-print('Ex = '+ str(Ex)+ '        (Primary Dir)\nEy = ' + str(Ey) + '        (Secondary Dir)\nGxy = '+ str(Gxy) + '       (Shear Modulus)\nvxy = '+str(vxy)+'      (poissons ratio)\n')
+printCR('b',"\nLAMINATE MATERIAL PROPERTIES")
+print('Ex = '+ engineering_notation(Ex)+ '\t\t(Primary Dir)\n'
+      'Ey = ' + engineering_notation(Ey) + '\t\t(Secondary Dir)\n'
+      'Gxy = '+ engineering_notation(Gxy) + '\t\t(Shear Modulus)\n'
+      'vxy = '+str(vxy)+'\t\t(poissons ratio)\n')
 top=np.concatenate((RealA,RealB),0)
 bot=np.concatenate((RealB,RealD),0)
 ABD=np.concatenate((top,bot),1)
-print(Fore.BLUE+"ABD MATRIX"+Style.RESET_ALL)
-print(ABD)
-print("\n")
+printCR('b',"ABD MATRIX")
+print_engineering_matrix(ABD,use_table_format=False)
 
-print(Fore.BLUE+"REPORT"+Style.RESET_ALL)
+
+#This is all reporting based on the ABD matrix, helpful to highlight how a laminate may not be ideal
+printCR('b',"\nREPORT")
 if (symmetry==0 and balance_check==0):
-    print(Fore.GREEN + "VERIFIED: Laminate is Balanced-Symmetric"+Style.RESET_ALL)
+    printCR('g', "VERIFIED: Laminate is Balanced-Symmetric")
 else:
     if symmetry==0:
-        print(Fore.GREEN + "VERIFIED: Layup is Symmetric"+Style.RESET_ALL)
+        printCR('g',"VERIFIED: Layup is Symmetric")
     if balance_check==0:
-        print(Fore.GREEN + "VERIFIED: Laminate is Balanced"+Style.RESET_ALL)
+        printCR('g',"VERIFIED: Laminate is Balanced")
 
 if QI_Result==True:
-    print(Fore.GREEN + "VERIFIED: Laminate is quasi-isotropic"+Style.RESET_ALL)
+    printCR('g',"VERIFIED: Laminate is quasi-isotropic")
 if symmetry != 0:
-    print(Fore.YELLOW + "WARNING: Layup is Asymmetric" + Style.RESET_ALL)
+    printCR('y',"WARNING: Layup is Asymmetric")
 if result[1]>=3:
-    print(Fore.YELLOW + "WARNING: Layup has "+str(result[1])+" plies at "+str(result[0])+" degrees next to each other"+Style.RESET_ALL)
+    printCR('y',"WARNING: Layup has "+
+            str(grouping[1])+" plies at "+
+            str(grouping[0])+" degrees next to each other")
 if max_angle>45:
-    print(Fore.YELLOW + "WARNING: Large angular difference between plies ("+str(max_angle)+" degrees)"+Style.RESET_ALL)
+    printCR('y',"WARNING: Large angular difference between plies ("+
+          str(max_angle)+" degrees)")
 if (RealA[0,2]or RealA[1,2])!=0:
-    print(Fore.RED + "ACHTUNG: In-plane shear present (A16,A26)"+Style.RESET_ALL)
+    printCR('r',"ACHTUNG: In-plane shear present (A16,A26)")
 if (RealB[0,0]or RealB[1,1])!=0:
-    print(Fore.RED + "ACHTUNG: Tension-bending coupling present (B11,B22)"+Style.RESET_ALL)
+    printCR('r',"ACHTUNG: Tension-bending coupling present (B11,B22)")
 if (RealB[0,1]or RealB[1,0])!=0:
-    print(Fore.RED + "ACHTUNG: Out-of-plane tension-bending coupling present (B12)"+Style.RESET_ALL)
+    printCR('r',"ACHTUNG: Out-of-plane tension-bending coupling present (B12)")
 if (RealB[0,2]or RealB[1,2]or RealB[2,0]or RealB[2,1])!=0:
-    print(Fore.RED + "ACHTUNG: Tension-twist coupling present (B16, B26)"+Style.RESET_ALL)
+    printCR('r',"ACHTUNG: Tension-twist coupling present (B16, B26)")
 if (RealB[2,2])!=0:
-    print(Fore.RED + "ACHTUNG: Shear-twist coupling present (B66)"+Style.RESET_ALL)
+    printCR('r',"ACHTUNG: Shear-twist coupling present (B66)")
 if (RealD[0,2]or RealD[1,2])!=0:
-    print(Fore.RED + "ACHTUNG: Out-of plane shear present (D16,D26)"+Style.RESET_ALL)
+    printCR('r',"ACHTUNG: Out-of plane shear present (D16,D26)")
